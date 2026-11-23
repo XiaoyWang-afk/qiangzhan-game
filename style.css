@@ -89,15 +89,16 @@ kbd { display: inline-block; min-width: 21px; padding: 2px 4px; text-align: cent
 .loadout { display: flex; gap: 5px; }
 .loadout button { min-width: 31px; min-height: 29px; background: #171526; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font: 11px var(--mono); }
 .loadout button[aria-pressed=true] { background: #292041; border-color: #7659af; color: #dbc5ff; }
-.touch-actions { position: absolute; bottom: 14px; right: 26px; display: flex; gap: 8px; }
-.touch-actions button { min-width: 48px; min-height: 42px; border-radius: 6px; border: 1px solid #7659af; background: #201638e8; font-size: 12px; touch-action: manipulation; }
+.touch-actions { display: flex; gap: 8px; }
+.touch-actions button { min-width: 48px; min-height: 44px; border-radius: 6px; border: 1px solid #7659af; background: #201638e8; font-size: 12px; touch-action: none; }
 footer { display: flex; justify-content: space-between; gap: 12px; padding: 18px 1px 22px; color: #9a91b0; font-size: 11px; letter-spacing: .1em; }
 .footer-divider { color: #8c72bf; }
-@media (pointer: coarse) {
-  .desktop-controls, .hint { display: none; }
-  .mobile-controls { display: flex; }
-  .stage.playing canvas { cursor: default; }
-}
+.touch-mode .desktop-controls, .touch-mode .hint { display: none; }
+.touch-mode .mobile-controls { display: flex; grid-column: 1 / -1; }
+.touch-mode .stage.playing canvas { cursor: default; }
+.touch-mode .icon-button, .touch-mode .loadout button, .touch-mode .primary { min-width: 44px; min-height: 44px; }
+.touch-mode .legend { display: grid; grid-template-columns: 1fr auto; }
+.touch-mode .loadout { grid-column: 2; }
 @media (max-width: 680px) {
   .machine { width: calc(100% - 24px); }
   .masthead { min-height: 63px; }
@@ -124,6 +125,28 @@ footer { display: flex; justify-content: space-between; gap: 12px; padding: 18px
   .primary { min-height: 39px; }
   .result { margin: 0 0 8px; }
   .legend { min-height: 43px; }
+  .touch-mode.in-battle, .touch-mode.in-battle body { overflow: hidden; overscroll-behavior: none; touch-action: none; }
+  .touch-mode .machine { display: flex; flex-direction: column; height: 100dvh; }
+  .touch-mode .masthead { min-height: 50px; }
+  .touch-mode .cabinet { flex: 1; display: grid; grid-template-rows: auto minmax(165px, 1fr) auto; }
+  .touch-mode .stage { height: auto; }
+  .touch-mode .hud { min-height: 44px; }
+  .touch-mode .stat { padding-block: 4px; }
+  .touch-mode .stat > span { font-size: 10px; }
+  .touch-mode .stat strong { font-size: 18px; }
+  .touch-mode .life-track { bottom: 13px; }
+  .touch-mode .legend { grid-template-columns: 1fr auto auto; min-height: 50px; padding-block: 3px; }
+  .touch-mode .mobile-controls { grid-column: 1; }
+  .touch-mode .loadout { grid-column: 3; }
+  .touch-mode footer { display: none; }
+  .touch-mode .arena-label { top: 13px; }
+  .touch-mode .briefing { padding: 4px 12px; }
+  .touch-mode .eyebrow { font-size: 10px; line-height: 1.2; }
+  .touch-mode h1 { margin: 4px 0; font-size: clamp(30px, 9dvh, 44px); line-height: 1.05; }
+  .touch-mode .briefing p { margin: 5px 0 7px; font-size: 12px; line-height: 1.3; }
+  .touch-mode .result { margin: 0 0 7px; }
+  .touch-mode .result span { display: block; font-size: 10px; line-height: 1.25; }
+  .touch-mode .result strong { font-size: 18px; line-height: 1.15; }
 }
 @media (prefers-reduced-motion: reduce) {
   .life-track i { transition: none; }

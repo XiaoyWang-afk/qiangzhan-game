@@ -62,7 +62,27 @@
     keys.clear();
     mouse = null;
     isFiring = queuedShot = false;
+    const activeTouches = [touches.move, touches.aim];
     touches.move = touches.aim = null;
+    for (const touch of activeTouches) {
+      if (touch && ui.field.hasPointerCapture(touch.id)) ui.field.releasePointerCapture(touch.id);
+    }
+  }
+
+  function syncTouchUi() {
+    document.documentElement.classList.toggle('touch-mode', touchMode);
+    ui['touch-actions'].hidden = state !== 'play' || !touchMode;
+  }
+
+  function setTouchMode(enabled) {
+    if (touchMode === enabled) return;
+    touchMode = enabled;
+    syncTouchUi();
+    fit();
+  }
+
+  function pauseForTouchLayout() {
+    if (touchMode && state === 'play') change('paused', false);
   }
 
   function updateHud() {
@@ -95,10 +115,11 @@
     state = next;
     clearInput();
     ui.stage.classList.toggle('playing', next === 'play');
+    document.documentElement.classList.toggle('in-battle', next === 'play');
     ui.overlay.hidden = next === 'play';
     ui.pause.disabled = next === 'ready' || next === 'over';
     ui.pause.lastElementChild.textContent = next === 'paused' ? '继续' : '暂停';
-    ui['touch-actions'].hidden = next !== 'play' || !touchMode;
+    syncTouchUi();
     if (next !== 'play') {
       const [mode, first, second, sub, action] = {
         ready: ['生存模式', '霓虹', '围城', '封锁解除，敌机来袭。守住阵地，撑过下一波。', '开始战斗'],
@@ -139,6 +160,17 @@
     for (let i = 1; i < game.arsenal.length; i++) {
       if (Arena.switchGun(game, (game.player.slot + i) % game.arsenal.length)) break;
     }
+  }
+
+  function bindTouchAction(button, run) {
+    button.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      run();
+    });
+    button.addEventListener('click', e => {
+      if (e.detail === 0) run();
+    });
   }
 
   function point(e) {
@@ -257,8 +289,8 @@
     ui.sound.setAttribute('aria-pressed', muted);
     ui.sound.lastElementChild.textContent = muted ? '音效关闭' : '音效开启';
   });
-  ui['touch-gun'].addEventListener('click', cycleGun);
-  ui['touch-reload'].addEventListener('click', () => { if (state === 'play') Arena.reload(game); });
+  bindTouchAction(ui['touch-gun'], cycleGun);
+  bindTouchAction(ui['touch-reload'], () => { if (state === 'play') Arena.reload(game); });
   arms.forEach(button => button.addEventListener('click', () => {
     if (state === 'play') Arena.switchGun(game, Number(button.dataset.gun));
   }));
@@ -283,22 +315,22 @@
   });
   document.addEventListener('keyup', e => keys.delete(e.code));
   window.addEventListener('blur', () => { if (state === 'play') change('paused', false); });
+  window.addEventListener('resize', pauseForTouchLayout);
+  screen.orientation?.addEventListener('change', pauseForTouchLayout);
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') change('paused', false); });
   ui.field.addEventListener('contextmenu', e => e.preventDefault());
   ui.field.addEventListener('pointerdown', e => {
     if (state !== 'play' || e.button !== 0) return;
     if (e.pointerType === 'touch') {
+      setTouchMode(true);
       const p = point(e);
       const role = p.x < game.w / 2 ? 'move' : 'aim';
       if (touches[role]) return;
-      touchMode = true;
       mouse = null;
       isFiring = queuedShot = false;
-      ui['touch-actions'].hidden = false;
       touches[role] = { id: e.pointerId, ox: p.x, oy: p.y, ...p };
     } else {
-      touchMode = false;
-      ui['touch-actions'].hidden = true;
+      setTouchMode(false);
       mouse = point(e);
       isFiring = queuedShot = true;
     }
@@ -329,8 +361,8 @@
   }
   for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) ui.field.addEventListener(event, release);
   ui.field.addEventListener('pointerleave', () => { mouse = null; });
+  change('ready', false);
   new ResizeObserver(fit).observe(ui.field);
   fit();
-  change('ready', false);
   requestAnimationFrame(frame);
 })();
