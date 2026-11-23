@@ -90,7 +90,7 @@
     const ammo = game.arsenal[p.slot];
     const unlocked = game.arsenal.map(item => item.unlocked).join(',');
     const notice = game.noticeTime > 0 ? game.notice : '';
-    const signature = [state, p.hp, p.slot, ammo.clip, ammo.reserve, !!p.reload, game.wave, game.score, game.best, unlocked, notice].join('|');
+    const signature = [state, p.hp, p.slot, ammo.clip, ammo.reserve, !!ammo.reload, game.wave, game.score, game.best, unlocked, notice].join('|');
     if (signature === uiSnapshot) return;
     uiSnapshot = signature;
     ui.life.classList.toggle('critical', p.hp <= 25);
@@ -98,7 +98,7 @@
     ui.hp.textContent = p.hp;
     ui['life-bar'].style.width = p.hp + '%';
     ui.gun.textContent = Arena.guns[p.slot].name;
-    ui['reload-status'].hidden = !p.reload;
+    ui['reload-status'].hidden = !ammo.reload;
     const reserve = document.createElement('span');
     reserve.textContent = ' / ' + (ammo.reserve === Infinity ? '∞' : ammo.reserve);
     ui.ammo.replaceChildren(ammo.clip, reserve);
@@ -162,8 +162,13 @@
   function cycleGun() {
     if (state !== 'play') return;
     for (let i = 1; i < game.arsenal.length; i++) {
-      if (Arena.switchGun(game, (game.player.slot + i) % game.arsenal.length)) break;
+      const slot = (game.player.slot + i) % game.arsenal.length;
+      if (game.arsenal[slot].unlocked) {
+        Arena.switchGun(game, slot);
+        return;
+      }
     }
+    Arena.switchGun(game, game.arsenal.findIndex(ammo => !ammo.unlocked));
   }
 
   function bindTouchAction(button, run) {

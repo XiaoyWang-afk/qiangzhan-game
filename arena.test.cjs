@@ -24,6 +24,7 @@ test('movement normalizes diagonal input and stays inside the arena', () => {
 test('weapon pickup unlocks a slot and reload consumes the correct reserve', () => {
   const game = arena.create(960, 600);
   assert.equal(arena.switchGun(game, 1), false);
+  assert.equal(game.notice, '未解锁 · 拾取霰弹枪');
   advance(game, .53);
   const pickup = game.drops.find(d => d.kind === 'gun');
   assert.equal(pickup.amount, 1);
@@ -39,6 +40,19 @@ test('weapon pickup unlocks a slot and reload consumes the correct reserve', () 
   assert.equal(game.arsenal[1].clip, 6);
   assert.equal(game.arsenal[1].reserve, 17);
   assert.equal(arena.switchGun(game, 0), true);
+});
+
+test('switching weapons lets a pending reload finish in the background', () => {
+  const game = arena.create(960, 600);
+  Object.assign(game.arsenal[1], { unlocked: true, clip: 5, reserve: 18 });
+  assert.equal(arena.switchGun(game, 1), true);
+  assert.equal(arena.reload(game), true);
+  assert.equal(arena.switchGun(game, 0), true);
+  advance(game, 1.15);
+  assert.equal(arena.switchGun(game, 1), true);
+  assert.equal(game.arsenal[1].clip, 6);
+  assert.equal(game.arsenal[1].reserve, 17);
+  assert.equal(game.arsenal[1].reload, 0);
 });
 
 test('every fourth wave includes a boss, and ranged enemies fire', () => {
@@ -94,6 +108,37 @@ test('coincident enemies spread apart and do not cover the player', () => {
       if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= a.r + b.r);
     }
   }
+});
+
+test('a point-blank shotgun blast hits an overlapping scout before the muzzle', () => {
+  const game = arena.create(960, 600);
+  game.player.x = 26;
+  Object.assign(game.arsenal[1], { unlocked: true, clip: 6, reserve: 18 });
+  assert.equal(arena.switchGun(game, 1), true);
+  advance(game, .14);
+  game.enemies.push({ x: 25, y: game.player.y, kind: 'scout', r: 14, hp: 46, max: 46, warm: 0, fire: 0, phase: 0, hit: 0 });
+  advance(game, .01, { ...idle, angle: Math.PI, fire: true });
+  assert.equal(game.arsenal[1].clip, 5);
+  assert.equal(game.enemies.length, 0);
+  assert.equal(game.score, 100);
+});
+
+test('ammo stays available and silent until at least one reserve can refill', () => {
+  const game = arena.create(960, 600);
+  const drop = { x: game.player.x, y: game.player.y, kind: 'ammo', life: 2 };
+  game.drops.push(drop);
+  advance(game, .01);
+  assert.equal(game.drops.includes(drop), true);
+  assert.equal(game.events.includes('pickup'), false);
+  Object.assign(game.arsenal[1], { unlocked: true, reserve: 54 });
+  advance(game, .01);
+  assert.equal(game.drops.includes(drop), true);
+  assert.equal(game.events.includes('pickup'), false);
+  game.arsenal[1].reserve = 51;
+  advance(game, .01);
+  assert.equal(game.drops.includes(drop), false);
+  assert.equal(game.arsenal[1].reserve, 54);
+  assert.equal(game.events.includes('pickup'), true);
 });
 
 test('health and ammo pickups refill resources, and lethal damage ends the run', () => {

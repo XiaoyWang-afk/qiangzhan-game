@@ -23,8 +23,8 @@ const Arena = (() => {
   function create(w, h, best = 0) {
     return {
       w, h, best, newRecord: false, score: 0, elapsed: 0, wave: 0, spawnIn: 0, nextWave: .52,
-      player: { x: w / 2, y: h / 2, r: 15, hp: 100, angle: -Math.PI / 2, heat: 0, reload: 0, shield: 0, flash: 0, slot: 0 },
-      arsenal: guns.map((gun, i) => ({ clip: i ? 0 : gun.size, reserve: i ? 0 : Infinity, unlocked: i === 0 })),
+      player: { x: w / 2, y: h / 2, r: 15, hp: 100, angle: -Math.PI / 2, heat: 0, shield: 0, flash: 0, slot: 0 },
+      arsenal: guns.map((gun, i) => ({ clip: i ? 0 : gun.size, reserve: i ? 0 : Infinity, unlocked: i === 0, reload: 0 })),
       pending: [], enemies: [], bullets: [], drops: [], sparks: [], rings: [], events: [],
       shake: 0, red: 0, notice: '', noticeTime: 0,
     };
@@ -50,9 +50,13 @@ const Arena = (() => {
   }
 
   function switchGun(s, slot) {
-    if (!s.arsenal[slot]?.unlocked || slot === s.player.slot) return false;
+    const ammo = s.arsenal[slot];
+    if (!ammo || slot === s.player.slot) return false;
+    if (!ammo.unlocked) {
+      notify(s, '未解锁 · 拾取' + guns[slot].name);
+      return false;
+    }
     s.player.slot = slot;
-    s.player.reload = 0;
     s.player.heat = Math.max(.12, s.player.heat);
     s.events.push('switch');
     return true;
@@ -61,8 +65,8 @@ const Arena = (() => {
   function reload(s) {
     const p = s.player;
     const ammo = s.arsenal[p.slot];
-    if (p.reload || ammo.clip === guns[p.slot].size || ammo.reserve === 0) return false;
-    p.reload = guns[p.slot].reload;
+    if (ammo.reload || ammo.clip === guns[p.slot].size || ammo.reserve === 0) return false;
+    ammo.reload = guns[p.slot].reload;
     s.events.push('reload');
     return true;
   }
@@ -123,7 +127,7 @@ const Arena = (() => {
     const p = s.player;
     const gun = guns[p.slot];
     const ammo = s.arsenal[p.slot];
-    if (p.heat || p.reload) return;
+    if (p.heat || ammo.reload) return;
     if (!ammo.clip) {
       if (!reload(s)) {
         p.heat = .24;
@@ -137,7 +141,7 @@ const Arena = (() => {
     s.shake = Math.max(s.shake, [2.4, 6.5, 1.8][p.slot]);
     for (let i = 0; i < gun.count; i++) {
       const a = p.angle + (gun.count === 1 ? random(-gun.spread / 2, gun.spread / 2) : (i / (gun.count - 1) - .5) * gun.spread);
-      s.bullets.push({ x: p.x + Math.cos(a) * 23, y: p.y + Math.sin(a) * 23, a, speed: gun.speed, life: gun.life, damage: gun.damage, color: gun.color, enemy: false, r: 2.4 });
+      s.bullets.push({ x: p.x, y: p.y, a, muzzle: 23, speed: gun.speed, life: gun.life, damage: gun.damage, color: gun.color, enemy: false, r: 2.4 });
     }
     burst(s, p.x + Math.cos(p.angle) * 25, p.y + Math.sin(p.angle) * 25, gun.color, p.slot === 1 ? 9 : 3, 88);
     s.events.push('shot' + p.slot);
@@ -243,11 +247,21 @@ const Arena = (() => {
     }
   }
 
-  function segmentDistance(a, x, y, target) {
+  function segmentHit(a, x, y, target) {
     const dx = a.x - x;
     const dy = a.y - y;
-    const f = clamp(((target.x - x) * dx + (target.y - y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
-    return Math.hypot(target.x - x - dx * f, target.y - y - dy * f);
+    const ox = x - target.x;
+    const oy = y - target.y;
+    const radius = target.r + a.r;
+    const offset = ox * ox + oy * oy - radius * radius;
+    if (offset <= 0) return 0;
+    const along = ox * dx + oy * dy;
+    if (along >= 0) return Infinity;
+    const squared = dx * dx + dy * dy;
+    const discriminant = along * along - squared * offset;
+    if (discriminant < 0) return Infinity;
+    const time = (-along - Math.sqrt(discriminant)) / squared;
+    return time <= 1 ? time : Infinity;
   }
 
   function updateBullets(s, dt) {
@@ -255,19 +269,31 @@ const Arena = (() => {
     s.bullets = s.bullets.filter(b => {
       if ((b.life -= dt) <= 0) return false;
       const { x, y } = b;
-      b.x += Math.cos(b.a) * b.speed * dt;
-      b.y += Math.sin(b.a) * b.speed * dt;
+      const travel = b.speed * dt + (b.muzzle || 0);
+      if (b.muzzle) b.muzzle = 0;
+      b.x += Math.cos(b.a) * travel;
+      b.y += Math.sin(b.a) * travel;
       if (b.enemy) {
-        if (segmentDistance(b, x, y, p) < p.r + b.r) {
+        if (segmentHit(b, x, y, p) !== Infinity) {
           hurt(s, b.damage);
           return false;
         }
       } else {
+        let first;
+        let time = Infinity;
         for (const e of s.enemies) {
-          if (e.hp > 0 && e.warm <= 0 && segmentDistance(b, x, y, e) < e.r + b.r) {
-            hitEnemy(s, e, b);
-            return false;
+          if (e.hp <= 0 || e.warm > 0) continue;
+          const hit = segmentHit(b, x, y, e);
+          if (hit < time) {
+            first = e;
+            time = hit;
           }
+        }
+        if (first) {
+          b.x = x + (b.x - x) * time;
+          b.y = y + (b.y - y) * time;
+          hitEnemy(s, first, b);
+          return false;
         }
       }
       return b.x >= -12 && b.y >= -12 && b.x <= s.w + 12 && b.y <= s.h + 12;
@@ -285,9 +311,13 @@ const Arena = (() => {
         p.hp = Math.min(100, p.hp + d.amount);
         notify(s, '已拾取 · 生命补给');
       } else if (d.kind === 'ammo') {
+        let refilled = false;
         for (const [index, ammo] of s.arsenal.entries()) {
-          if (ammo.unlocked && index) ammo.reserve = Math.min(guns[index].reserve * 3, ammo.reserve + guns[index].size * 2);
+          if (!index || !ammo.unlocked || ammo.reserve >= guns[index].reserve * 3) continue;
+          ammo.reserve = Math.min(guns[index].reserve * 3, ammo.reserve + guns[index].size * 2);
+          refilled = true;
         }
+        if (!refilled) return true;
         notify(s, '已拾取 · 弹药补给');
       } else {
         const gun = guns[d.amount];
@@ -327,12 +357,12 @@ const Arena = (() => {
     p.heat = Math.max(0, p.heat - dt);
     p.flash = Math.max(0, p.flash - dt);
     p.shield = Math.max(0, p.shield - dt);
-    if (p.reload > 0 && (p.reload = Math.max(0, p.reload - dt)) === 0) {
-      const ammo = s.arsenal[p.slot];
-      const count = Math.min(guns[p.slot].size - ammo.clip, ammo.reserve);
+    for (const [slot, ammo] of s.arsenal.entries()) {
+      if (!ammo.reload || (ammo.reload = Math.max(0, ammo.reload - dt)) > 0) continue;
+      const count = Math.min(guns[slot].size - ammo.clip, ammo.reserve);
       ammo.clip += count;
       ammo.reserve -= count;
-      s.events.push('loaded');
+      if (slot === p.slot) s.events.push('loaded');
     }
     const move = Math.max(1, length(input.x, input.y));
     p.x = clamp(p.x + input.x / move * dt * 255, 26, s.w - 26);

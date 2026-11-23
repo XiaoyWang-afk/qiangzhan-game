@@ -41,7 +41,6 @@
         <canvas id="field" aria-label="俯视竞技场"></canvas>
         <div class="stage-mark top-left" aria-hidden="true"></div><div class="stage-mark top-right" aria-hidden="true"></div>
         <div class="stage-mark bottom-left" aria-hidden="true"></div><div class="stage-mark bottom-right" aria-hidden="true"></div>
-        <div class="notice" id="notice" hidden></div>
         <div class="overlay" id="overlay">
           <div class="briefing">
             <div class="eyebrow" id="eyebrow"><i></i><span>生存模式</span><i></i></div>
@@ -57,8 +56,11 @@
         </div>
       </div>
       <div class="legend">
-        <div class="controls desktop-controls"><span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> 移动</span><span><kbd>鼠标</kbd> 瞄准／射击</span><span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 切换武器</span><span><kbd>R</kbd> 换弹</span><span><kbd>P</kbd> / <kbd>Esc</kbd> 暂停</span></div>
-        <div class="controls mobile-controls"><span>左侧拖动 · 移动</span><span>右侧拖动 · 瞄准／射击</span></div>
+        <div class="legend-info">
+          <div class="controls desktop-controls"><span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> 移动</span><span><kbd>鼠标</kbd> 瞄准／射击</span><span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 切换武器 · 拾取解锁</span><span><kbd>R</kbd> 换弹</span><span><kbd>P</kbd> / <kbd>Esc</kbd> 暂停</span></div>
+          <div class="controls mobile-controls"><span>左侧拖动 · 移动</span><span>右侧拖动 · 瞄准／射击</span><span>拾取解锁武器</span></div>
+          <div class="notice" id="notice" hidden></div>
+        </div>
         <div class="touch-actions" id="touch-actions" hidden>
           <button type="button" id="touch-gun">切换</button><button type="button" id="touch-reload">换弹</button>
         </div>

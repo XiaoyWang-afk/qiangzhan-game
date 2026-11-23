@@ -190,6 +190,12 @@ const Visual = (() => {
     } else {
       c.fillRect(-6, -4, 12, 4);
       c.fillRect(-4, 0, 4, 5);
+      c.font = '600 16px "Noto Sans SC Arcade", "PingFang SC", "Microsoft YaHei", sans-serif';
+      c.textAlign = 'center';
+      c.lineWidth = 3;
+      c.strokeStyle = '#17102b';
+      c.strokeText(guns[d.amount].name, 0, 31);
+      c.fillText(guns[d.amount].name, 0, 31);
     }
     c.restore();
   }
