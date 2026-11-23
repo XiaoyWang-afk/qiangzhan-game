@@ -1,6 +1,6 @@
-# 枪战 · 霓虹围城
+# 枪战手记 · 纸上突围
 
-一款俯视角街机生存游戏。操控霓虹战机，对抗侦察机、冲锋机、远程射手机，以及每四波出现一次的首领。
+一款俯视角街机生存游戏。操控蓝墨水纸飞机，在暖白方格纸上对抗铅笔涂鸦的侦察机、冲锋机、远程射手机，以及每四波出现一次的首领。
 
 ## 开始游戏
 
@@ -30,4 +30,4 @@ node --test arena.test.cjs
 
 游戏逻辑在 `arena.js`，Canvas 绘制在 `visual.js`，输入、界面、音效和本地纪录在 `game.js`。
 
-内置中文字体为 Noto Sans SC 的字形子集，许可见 [FONT-LICENSE.txt](FONT-LICENSE.txt)。
+内置中文字体为 Noto Sans SC 的字形子集，许可见 [FONT-LICENSE.txt](FONT-LICENSE.txt)。标题和手写数字使用 Ma Shan Zheng 子集，许可见 [HANDWRITING-LICENSE.txt](HANDWRITING-LICENSE.txt)。字体均随源码提供，不请求外部资源。

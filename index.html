@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0b13">
-  <title>枪战 · 霓虹围城</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23151329'/%3E%3Cpath d='M16 5 27 16 16 27 5 16Z' fill='none' stroke='%23bb9aff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23bb9aff'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#faf7ed">
+  <title>枪战 · 纸上突围</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23faf7ed'/%3E%3Cpath d='M27 6 8 17 5 8 27 6 15 26 12 18Z' fill='%23d9e4e5' stroke='%23386789' stroke-width='1.5'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script defer src="arena.js"></script>
   <script defer src="visual.js"></script>
@@ -16,10 +16,10 @@
     <header class="masthead">
       <div class="brand">
         <span class="brand-icon" aria-hidden="true"><i></i></span>
-        <div><strong>枪战</strong><small>霓虹围城</small></div>
+        <div><strong>枪战手记</strong><small>纸上突围 · 生存练习</small></div>
       </div>
       <div class="mast-actions">
-        <span class="online"><i></i> 街机系统在线</span>
+        <span class="online"><i></i> 今天也要守住！</span>
         <button class="icon-button" id="sound" type="button" aria-pressed="false">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z M16 9a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12"/></svg><span>音效开启</span>
         </button>
@@ -29,7 +29,7 @@
       </div>
     </header>
 
-    <section class="cabinet" aria-label="霓虹围城竞技场">
+    <section class="cabinet" aria-label="纸上突围竞技场">
       <div class="hud">
         <div class="stat life" id="life"><span id="life-label">生命值</span><strong id="hp">100</strong><div class="life-track" aria-hidden="true"><i id="life-bar"></i></div></div>
         <div class="stat ammo"><div class="weapon-meta"><span id="gun">手枪</span><span id="reload-status" hidden>换弹中</span></div><strong id="ammo">12<span> / ∞</span></strong></div>
@@ -39,13 +39,12 @@
       </div>
       <div class="stage" id="stage">
         <canvas id="field" aria-label="俯视竞技场"></canvas>
-        <div class="stage-mark top-left" aria-hidden="true"></div><div class="stage-mark top-right" aria-hidden="true"></div>
-        <div class="stage-mark bottom-left" aria-hidden="true"></div><div class="stage-mark bottom-right" aria-hidden="true"></div>
+        <div class="arena-label" aria-hidden="true"><i></i> 作战草稿 <span>／</span> 第 01 页</div>
         <div class="overlay" id="overlay">
           <div class="briefing">
-            <div class="eyebrow" id="eyebrow"><i></i><span>生存模式</span><i></i></div>
-            <h1 id="heading">霓虹<span>围城</span></h1>
-            <p id="subtitle">封锁解除，敌机来袭。守住阵地，撑过下一波。</p>
+            <div class="eyebrow" id="eyebrow"><i></i><span>生存模式 · 涂鸦作战</span><i></i></div>
+            <h1 id="heading">纸上<span>突围</span></h1>
+            <p id="subtitle">一张纸，一道防线。守住阵地，撑过下一波。</p>
             <div id="result" class="result" hidden>
               <div><span>本局得分</span><strong id="final-score"></strong></div>
               <div><span>最高纪录</span><strong id="final-best"></strong></div>
@@ -72,7 +71,7 @@
         </div>
       </div>
     </section>
-    <footer><span>霓虹街区<span class="footer-divider"> / </span>零号防线</span><span>存活越久，得分越高。</span></footer>
+    <footer><span>铅笔起稿<span class="footer-divider"> / </span>勇气上色</span><span>存活越久，得分越高。</span></footer>
   </main>
 </body>
 </html>
