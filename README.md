@@ -25,7 +25,7 @@ python3 -m http.server 8000
 使用 Node.js 内置测试运行器，无需安装依赖：
 
 ```sh
-node --test arena.test.cjs
+node --test
 ```
 
 游戏逻辑在 `arena.js`，Canvas 绘制在 `visual.js`，输入、界面、音效和本地纪录在 `game.js`。

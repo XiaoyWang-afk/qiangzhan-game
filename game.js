@@ -118,6 +118,8 @@
 
   function change(next, focus = true) {
     state = next;
+    if (next === 'play' && !document.hidden) audio.init();
+    else if (next === 'paused') audio.stop();
     clearInput();
     ui.stage.classList.toggle('playing', next === 'play');
     document.documentElement.classList.toggle('in-battle', next === 'play');
@@ -148,7 +150,6 @@
   }
 
   function action() {
-    audio.init();
     if (state === 'paused') {
       change('play');
     } else if (state === 'ready' || state === 'over') {
@@ -241,6 +242,7 @@
   }
 
   function createAudio() {
+    const preferenceKey = 'qiangzhan-muted-v1';
     const sounds = {
       shot0: [258, 83, .085, 'triangle', .12],
       shot1: [138, 32, .16, 'sawtooth', .15],
@@ -258,22 +260,33 @@
     };
     let ac;
     let master;
+    const tones = new Set();
     let muted = false;
+    try {
+      muted = localStorage.getItem(preferenceKey) === 'true';
+    } catch {}
     function init() {
-      if (!window.AudioContext) return;
+      if (muted || !window.AudioContext) return;
       if (!ac) {
         ac = new AudioContext();
         master = ac.createGain();
-        master.gain.value = muted ? 0 : .56;
+        master.gain.value = .56;
         master.connect(ac.destination);
       }
-      if (ac.state === 'suspended') ac.resume().catch(() => {});
+      ac.resume().catch(() => {});
     }
     function toggle() {
       muted = !muted;
-      init();
-      if (master) master.gain.value = muted ? 0 : .56;
-      return muted;
+      try {
+        localStorage.setItem(preferenceKey, String(muted));
+      } catch {}
+      if (muted) stop();
+    }
+    function stop() {
+      if (!ac) return;
+      for (const tone of tones) tone.stop();
+      tones.clear();
+      ac.suspend().catch(() => {});
     }
     function play(name) {
       if (!ac || muted || ac.state !== 'running' || !sounds[name]) return;
@@ -288,18 +301,25 @@
       gain.gain.exponentialRampToValueAtTime(volume, t + .009);
       gain.gain.exponentialRampToValueAtTime(.001, t + duration);
       tone.connect(gain).connect(master);
+      tones.add(tone);
+      tone.onended = () => tones.delete(tone);
       tone.start(t);
       tone.stop(t + duration + .01);
     }
-    return { init, toggle, play };
+    return { get muted() { return muted; }, init, toggle, play, stop };
+  }
+
+  function syncSoundButton() {
+    ui.sound.setAttribute('aria-pressed', audio.muted);
+    ui.sound.lastElementChild.textContent = audio.muted ? '音效关闭' : '音效开启';
   }
 
   ui.action.addEventListener('click', action);
   ui.pause.addEventListener('click', togglePause);
   ui.sound.addEventListener('click', () => {
-    const muted = audio.toggle();
-    ui.sound.setAttribute('aria-pressed', muted);
-    ui.sound.lastElementChild.textContent = muted ? '音效关闭' : '音效开启';
+    audio.toggle();
+    if (state === 'play' && !document.hidden) audio.init();
+    syncSoundButton();
   });
   bindTouchAction(ui['touch-gun'], cycleGun);
   bindTouchAction(ui['touch-reload'], () => { if (state === 'play') Arena.reload(game); });
@@ -329,7 +349,11 @@
   window.addEventListener('blur', () => { if (state === 'play') change('paused', false); });
   window.addEventListener('resize', pauseForTouchLayout);
   screen.orientation?.addEventListener('change', pauseForTouchLayout);
-  document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') change('paused', false); });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) return;
+    if (state === 'play') change('paused', false);
+    else audio.stop();
+  });
   ui.field.addEventListener('contextmenu', e => e.preventDefault());
   ui.field.addEventListener('pointerdown', e => {
     if (state !== 'play' || e.button !== 0) return;
@@ -373,6 +397,7 @@
   }
   for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) ui.field.addEventListener(event, release);
   ui.field.addEventListener('pointerleave', () => { mouse = null; });
+  syncSoundButton();
   change('ready', false);
   new ResizeObserver(fit).observe(ui.field);
   fit();
