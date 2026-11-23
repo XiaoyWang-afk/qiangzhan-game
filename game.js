@@ -3,7 +3,7 @@
 (() => {
   const byId = id => document.getElementById(id);
   const ui = Object.fromEntries([
-    'field', 'stage', 'hp', 'life-bar', 'gun', 'ammo', 'wave', 'score', 'best', 'notice', 'overlay',
+    'field', 'stage', 'life', 'life-label', 'hp', 'life-bar', 'gun', 'reload-status', 'ammo', 'wave', 'score', 'best', 'notice', 'overlay',
     'eyebrow', 'heading', 'subtitle', 'result', 'final-score', 'final-best', 'action', 'hint',
     'sound', 'pause', 'touch-actions', 'touch-gun', 'touch-reload', 'loadout',
   ].map(id => [id, byId(id)]));
@@ -46,8 +46,8 @@
   function fit() {
     const box = ui.field.getBoundingClientRect();
     if (!box.width || !box.height) return;
-    const ratio = window.devicePixelRatio || 1;
-    const scale = Math.min(1.13, Math.max(.68, box.width / 1160, box.height / 625));
+    const ratio = Math.min(window.devicePixelRatio || 1, 3840 / box.width, 2160 / box.height);
+    const scale = Math.max(.68, box.width / 1160, box.height / 625);
     Arena.resize(game, box.width / scale, box.height / scale);
     const width = Math.round(box.width * ratio);
     const height = Math.round(box.height * ratio);
@@ -93,9 +93,12 @@
     const signature = [state, p.hp, p.slot, ammo.clip, ammo.reserve, !!p.reload, game.wave, game.score, game.best, unlocked, notice].join('|');
     if (signature === uiSnapshot) return;
     uiSnapshot = signature;
+    ui.life.classList.toggle('critical', p.hp <= 25);
+    ui['life-label'].textContent = p.hp > 0 && p.hp <= 25 ? '生命警报' : '生命值';
     ui.hp.textContent = p.hp;
     ui['life-bar'].style.width = p.hp + '%';
-    ui.gun.textContent = p.reload ? '换弹中…' : Arena.guns[p.slot].name;
+    ui.gun.textContent = Arena.guns[p.slot].name;
+    ui['reload-status'].hidden = !p.reload;
     const reserve = document.createElement('span');
     reserve.textContent = ' / ' + (ammo.reserve === Infinity ? '∞' : ammo.reserve);
     ui.ammo.replaceChildren(ammo.clip, reserve);
@@ -124,7 +127,8 @@
       const [mode, first, second, sub, action] = {
         ready: ['生存模式', '霓虹', '围城', '封锁解除，敌机来袭。守住阵地，撑过下一波。', '开始战斗'],
         paused: ['系统待命', '战斗', '暂停', '战场已冻结，随时可以继续。', '继续战斗'],
-        over: ['本轮结束', '防线', '失守', '你撑到了第 ' + game.wave + ' 波。再试一次，刷新纪录。', '再战一局'],
+        over: [game.newRecord ? '新纪录' : '本轮结束', '防线', '失守',
+          '你撑到了第 ' + game.wave + ' 波。' + (game.newRecord ? '最高纪录刷新。' : '再试一次，刷新纪录。'), '再战一局'],
       }[next];
       ui.eyebrow.querySelector('span').textContent = mode;
       ui.heading.firstChild.nodeValue = first;

@@ -31,8 +31,8 @@
 
     <section class="cabinet" aria-label="霓虹围城竞技场">
       <div class="hud">
-        <div class="stat life"><span>生命值</span><strong id="hp">100</strong><div class="life-track" aria-hidden="true"><i id="life-bar"></i></div></div>
-        <div class="stat ammo"><span id="gun">手枪</span><strong id="ammo">12<span> / ∞</span></strong></div>
+        <div class="stat life" id="life"><span id="life-label">生命值</span><strong id="hp">100</strong><div class="life-track" aria-hidden="true"><i id="life-bar"></i></div></div>
+        <div class="stat ammo"><div class="weapon-meta"><span id="gun">手枪</span><span id="reload-status" hidden>换弹中</span></div><strong id="ammo">12<span> / ∞</span></strong></div>
         <div class="stat"><span>波次</span><strong id="wave">01</strong></div>
         <div class="stat"><span>得分</span><strong id="score">00000</strong></div>
         <div class="stat record"><span>最高纪录</span><strong id="best">00000</strong></div>
@@ -41,7 +41,6 @@
         <canvas id="field" aria-label="俯视竞技场"></canvas>
         <div class="stage-mark top-left" aria-hidden="true"></div><div class="stage-mark top-right" aria-hidden="true"></div>
         <div class="stage-mark bottom-left" aria-hidden="true"></div><div class="stage-mark bottom-right" aria-hidden="true"></div>
-        <div class="arena-label" aria-hidden="true"><i></i> 竞技场 <span>／</span> 01</div>
         <div class="notice" id="notice" hidden></div>
         <div class="overlay" id="overlay">
           <div class="briefing">
@@ -52,7 +51,7 @@
               <div><span>本局得分</span><strong id="final-score"></strong></div>
               <div><span>最高纪录</span><strong id="final-best"></strong></div>
             </div>
-            <button id="action" class="primary" type="button">开始战斗 <span aria-hidden="true">⟶</span></button>
+            <button id="action" class="primary" type="button">开始战斗 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button>
             <div id="hint" class="hint">按 <kbd>回车</kbd> 快速开始</div>
           </div>
         </div>

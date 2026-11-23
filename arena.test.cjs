@@ -66,8 +66,34 @@ test('successful hits score once, update the best run, and allow the next wave',
   assert.equal(game.enemies.length, 0);
   assert.equal(game.score, 100);
   assert.equal(game.best, 100);
+  assert.equal(game.newRecord, true);
   advance(game, .15);
   assert.equal(game.wave, 2);
+});
+
+test('tying the saved record does not count as a new record', () => {
+  const game = arena.create(960, 600, 100);
+  game.enemies.push({ x: 540, y: 300, kind: 'scout', r: 14, hp: 20, max: 46, warm: 0, fire: 0, phase: 0, hit: 0 });
+  advance(game, .1, { ...idle, angle: 0, fire: true });
+  assert.equal(game.score, 100);
+  assert.equal(game.best, 100);
+  assert.equal(game.newRecord, false);
+});
+
+test('coincident enemies spread apart and do not cover the player', () => {
+  const game = arena.create(960, 600);
+  game.wave = 12;
+  for (const kind of ['scout', 'boss', 'dash']) {
+    const { r, hp } = arena.types[kind];
+    game.enemies.push({ x: game.player.x, y: game.player.y, kind, r, hp, max: hp, warm: 0, fire: 1, phase: 0, hit: 0 });
+  }
+  advance(game, .12);
+  for (const a of game.enemies) {
+    assert.ok(Math.hypot(a.x - game.player.x, a.y - game.player.y) >= a.r + game.player.r - .01);
+    for (const b of game.enemies) {
+      if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= a.r + b.r);
+    }
+  }
 });
 
 test('health and ammo pickups refill resources, and lethal damage ends the run', () => {

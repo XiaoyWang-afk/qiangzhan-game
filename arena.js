@@ -22,7 +22,7 @@ const Arena = (() => {
 
   function create(w, h, best = 0) {
     return {
-      w, h, best, score: 0, elapsed: 0, wave: 0, spawnIn: 0, nextWave: .52,
+      w, h, best, newRecord: false, score: 0, elapsed: 0, wave: 0, spawnIn: 0, nextWave: .52,
       player: { x: w / 2, y: h / 2, r: 15, hp: 100, angle: -Math.PI / 2, heat: 0, reload: 0, shield: 0, flash: 0, slot: 0 },
       arsenal: guns.map((gun, i) => ({ clip: i ? 0 : gun.size, reserve: i ? 0 : Infinity, unlocked: i === 0 })),
       pending: [], enemies: [], bullets: [], drops: [], sparks: [], rings: [], events: [],
@@ -162,7 +162,10 @@ const Arena = (() => {
     burst(s, b.x, b.y, t.color, 4);
     if (e.hp) return;
     s.score += t.score;
-    s.best = Math.max(s.best, s.score);
+    if (s.score > s.best) {
+      s.best = s.score;
+      s.newRecord = true;
+    }
     s.shake = Math.max(s.shake, e.kind === 'boss' ? 13 : 4);
     s.events.push(e.kind === 'boss' ? 'alarm' : 'kill');
     burst(s, e.x, e.y, t.color, e.kind === 'boss' ? 42 : 17, e.kind === 'boss' ? 270 : 168);
@@ -190,26 +193,52 @@ const Arena = (() => {
       const sidestep = ranged ? Math.sin(s.elapsed * 2.4 + e.phase) * .34 : 0;
       e.x += (Math.cos(e.angle) * direction - Math.sin(e.angle) * sidestep) * speed * dt;
       e.y += (Math.sin(e.angle) * direction + Math.cos(e.angle) * sidestep) * speed * dt;
-      for (const other of s.enemies) {
-        if (e === other || other.warm > 0) continue;
-        const gap = distance(e, other);
-        if (gap && gap < e.r + other.r + 4) {
-          const repel = (e.r + other.r + 4 - gap) * dt * 3.8 / gap;
-          e.x += (e.x - other.x) * repel;
-          e.y += (e.y - other.y) * repel;
-        }
-      }
-      e.x = clamp(e.x, e.r + 11, s.w - e.r - 11);
-      e.y = clamp(e.y, e.r + 11, s.h - e.r - 11);
-      if (dist < e.r + p.r) hurt(s, t.damage);
+      if (distance(p, e) < e.r + p.r) hurt(s, t.damage);
       if (ranged && (e.fire -= dt) <= 0) {
         const boss = e.kind === 'boss';
         for (const offset of boss ? [-.5, -.25, 0, .25, .5] : [0]) {
           const a = e.angle + offset;
-          s.bullets.push({ x: e.x + Math.cos(a) * e.r, y: e.y + Math.sin(a) * e.r, a, speed: boss ? 252 : 278, life: 3.6, damage: boss ? 15 : t.damage, color: t.color, enemy: true, r: boss ? 5 : 4 });
+          s.bullets.push({ x: e.x + Math.cos(a) * e.r, y: e.y + Math.sin(a) * e.r, a, speed: boss ? 252 : 278, life: 3.6, damage: boss ? 15 : t.damage, color: '#ffe66d', enemy: true, r: boss ? 5 : 4 });
         }
         e.fire = boss ? 1.29 : 1.65;
         burst(s, e.x + Math.cos(e.angle) * e.r, e.y + Math.sin(e.angle) * e.r, t.color, 5, 75);
+      }
+    }
+    separateEnemies(s);
+  }
+
+  function separateEnemies(s) {
+    const crowd = s.enemies.filter(e => e.warm <= 0);
+    const p = s.player;
+    for (let pass = 0; pass < 3; pass++) {
+      for (let i = 0; i < crowd.length; i++) {
+        const a = crowd[i];
+        for (let j = i + 1; j < crowd.length; j++) {
+          const b = crowd[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const minGap = a.r + b.r + 5;
+          const squared = dx * dx + dy * dy;
+          if (squared >= minGap * minGap) continue;
+          const gap = Math.sqrt(squared);
+          const offset = (minGap - gap) / 2;
+          const x = (gap ? dx / gap : 1) * offset;
+          const y = (gap ? dy / gap : 0) * offset;
+          a.x += x;
+          a.y += y;
+          b.x -= x;
+          b.y -= y;
+        }
+      }
+      for (const e of crowd) {
+        const gap = distance(e, p);
+        const minGap = e.r + p.r;
+        if (gap < minGap) {
+          e.x = p.x + minGap * (gap ? (e.x - p.x) / gap : -Math.cos(e.angle));
+          e.y = p.y + minGap * (gap ? (e.y - p.y) / gap : -Math.sin(e.angle));
+        }
+        e.x = clamp(e.x, e.r + 11, s.w - e.r - 11);
+        e.y = clamp(e.y, e.r + 11, s.h - e.r - 11);
       }
     }
   }

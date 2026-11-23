@@ -172,7 +172,7 @@ const Visual = (() => {
   }
 
   function pickup(c, d, time) {
-    const color = d.kind === 'health' ? cyan : d.kind === 'ammo' ? '#ffd094' : violet;
+    const color = d.kind === 'health' ? '#9cf389' : d.kind === 'ammo' ? '#ffd094' : violet;
     c.save();
     c.translate(d.x, d.y + Math.sin(time * 4 + d.x) * 3);
     if (d.life < 3) c.globalAlpha = .5 + .5 * Math.sin(time * 13) ** 2;
@@ -228,6 +228,23 @@ const Visual = (() => {
     c.globalAlpha = 1;
   }
 
+  function damageEdges(c, w, h, alpha) {
+    const depth = Math.min(52, Math.min(w, h) * .115);
+    const edges = [
+      [0, 0, w, depth, 0, 0, 0, depth],
+      [0, h - depth, w, depth, 0, h, 0, h - depth],
+      [0, 0, depth, h, 0, 0, depth, 0],
+      [w - depth, 0, depth, h, w, 0, w - depth, 0],
+    ];
+    for (const [x, y, width, height, x0, y0, x1, y1] of edges) {
+      const edge = c.createLinearGradient(x0, y0, x1, y1);
+      edge.addColorStop(0, 'rgba(255, 54, 111, ' + alpha * .8 + ')');
+      edge.addColorStop(1, '#ff366f00');
+      c.fillStyle = edge;
+      c.fillRect(x, y, width, height);
+    }
+  }
+
   function renderer(c) {
     let floor;
     return (s, options) => {
@@ -273,9 +290,15 @@ const Visual = (() => {
         c.shadowBlur = 9;
         path(c, [[b.x - Math.cos(b.a) * 12, b.y - Math.sin(b.a) * 12], [b.x, b.y]], false);
         c.stroke();
-        c.fillStyle = b.color;
-        circle(c, b.x, b.y, b.r);
-        c.fill();
+        if (b.enemy) {
+          const r = b.r + 1;
+          path(c, [[b.x, b.y - r], [b.x + r, b.y], [b.x, b.y + r], [b.x - r, b.y]]);
+          painted(c, '#fff6b0', '#66420e', 1);
+        } else {
+          c.fillStyle = b.color;
+          circle(c, b.x, b.y, b.r);
+          c.fill();
+        }
       }
       c.shadowBlur = 0;
       for (const p of s.sparks) {
@@ -287,13 +310,7 @@ const Visual = (() => {
       if (s.player.hp > 0 && !options.demo) player(c, s.player, time);
       c.restore();
 
-      if (s.red && !options.reduced) {
-        const g = c.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .2, w / 2, h / 2, Math.max(w, h) * .65);
-        g.addColorStop(0, '#ff497700');
-        g.addColorStop(1, 'rgba(255, 54, 111, ' + s.red + ')');
-        c.fillStyle = g;
-        c.fillRect(0, 0, w, h);
-      }
+      if (s.red && !options.reduced) damageEdges(c, w, h, s.red);
       if (options.touches) sticks(c, options.touches, w, h);
       if (options.aim) crosshair(c, options.aim.x, options.aim.y);
     };
