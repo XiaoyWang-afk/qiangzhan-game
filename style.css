@@ -116,9 +116,9 @@ footer span:first-child { font: 16px var(--mono); transform: rotate(-2deg); }
  .touch-mode.in-battle, .touch-mode.in-battle body { overflow: hidden; overscroll-behavior: none; touch-action: none; }
  .touch-mode .machine { display: flex; flex-direction: column; height: 100dvh; }
  .touch-mode .masthead { min-height: 50px; }
- .touch-mode .cabinet { flex: 1; display: grid; grid-template-rows: auto minmax(165px, 1fr) auto; }
+ .touch-mode .cabinet { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(165px, 1fr) auto; }
  .touch-mode .stage { height: auto; }
- .touch-mode .hud { min-height: 44px; }
+ .touch-mode .hud { min-height: 44px; padding-block: 2px; }
  .touch-mode .stat { padding-block: 4px; }
  .touch-mode .stat > span, .touch-mode .weapon-meta { font-size: 10px; }
  .touch-mode .stat strong { font-size: 18px; }
@@ -127,10 +127,10 @@ footer span:first-child { font: 16px var(--mono); transform: rotate(-2deg); }
  .touch-mode .legend-info { grid-column: 1; }
  .touch-mode .loadout { grid-column: 3; }
  .touch-mode footer { display: none; }
- .touch-mode .briefing { padding: 4px 12px; }
+ .touch-mode .briefing { padding: 2px 12px; }
  .touch-mode .eyebrow { font-size: 10px; line-height: 1.2; }
  .touch-mode h1 { margin: 4px 0; font-size: clamp(30px, 9dvh, 44px); line-height: 1.05; }
- .touch-mode .briefing p { margin: 5px 0 7px; font-size: 12px; line-height: 1.3; }
+ .touch-mode .briefing p { margin: 3px 0 4px; font-size: 12px; line-height: 1.3; }
  .touch-mode .result { margin: 0 0 7px; }
  .touch-mode .result span { display: block; font-size: 10px; line-height: 1.25; }
  .touch-mode .result strong { font-size: 18px; line-height: 1.15; }
