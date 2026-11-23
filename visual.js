@@ -66,7 +66,7 @@ const Visual = (() => {
     c.restore();
   }
 
-  function makeFloor(w, h) {
+  function makeFloor(w, h, showSideNotes) {
     const floor = document.createElement('canvas');
     floor.width = Math.ceil(w);
     floor.height = Math.ceil(h);
@@ -102,11 +102,13 @@ const Visual = (() => {
     line(c, [[0, -88], [1, 88]], '#959b8c');
     c.restore();
     label(c, '守住这里', w * .5 - 31, h * .5 + 108, 17, '#b9b9a7', -.07);
-    label(c, '别被包围！', 86, h - 47, 21, '#a5a28c', -.1);
-    line(c, [[94, h - 81], [117, h - 110], [145, h - 108]], '#b2b09a');
-    line(c, [[135, h - 113], [145, h - 108], [134, h - 103]], '#b2b09a');
-    label(c, '每四波', w - 135, h - 83, 18, '#b4a28e', .09);
-    label(c, '首领来袭', w - 136, h - 59, 18, '#b4a28e', .09);
+    if (showSideNotes) {
+      label(c, '别被包围！', 86, h - 47, 21, '#a5a28c', -.1);
+      line(c, [[94, h - 81], [117, h - 110], [145, h - 108]], '#b2b09a');
+      line(c, [[135, h - 113], [145, h - 108], [134, h - 103]], '#b2b09a');
+      label(c, '每四波', w - 135, h - 83, 18, '#b4a28e', .09);
+      label(c, '首领来袭', w - 136, h - 59, 18, '#b4a28e', .09);
+    }
     // A tiny pencil star in the upper right corner.
     c.save(); c.translate(w - 50, 32); c.rotate(.2);
     line(c, [[0, -10], [3, -3], [11, -2], [5, 3], [6, 11], [0, 6], [-7, 10], [-5, 2], [-11, -3], [-3, -3], [0, -10]], '#9e9b81');
@@ -257,11 +259,17 @@ const Visual = (() => {
 
   function renderer(c) {
     let floor;
+    let sideNotes;
+    const compactLandscape = matchMedia('(orientation: landscape) and (max-height: 520px)');
     document.fonts.ready.then(() => { floor = null; });
     return (s, options) => {
       const { w, h } = s;
       const time = options.time;
-      if (!floor || floor.width !== Math.ceil(w) || floor.height !== Math.ceil(h)) floor = makeFloor(w, h);
+      const showSideNotes = !options.touches || !compactLandscape.matches;
+      if (!floor || floor.width !== Math.ceil(w) || floor.height !== Math.ceil(h) || sideNotes !== showSideNotes) {
+        floor = makeFloor(w, h, showSideNotes);
+        sideNotes = showSideNotes;
+      }
       c.fillStyle = '#faf7ed'; c.fillRect(0, 0, w, h);
       c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
       const n = options.reduced ? 0 : s.shake;

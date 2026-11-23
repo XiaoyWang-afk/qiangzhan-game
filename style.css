@@ -111,6 +111,8 @@ footer span:first-child { font: 16px var(--mono); transform: rotate(-2deg); }
 }
 @media (orientation: landscape) and (max-height: 520px) {
  .masthead { min-height: 54px; } .hud { min-height: 49px; } .stage { height: max(205px,calc(100dvh - 165px)); }
+ .cabinet::before, .cabinet::after { top: 5px; width: 48px; height: 12px; }
+ .cabinet::before { left: 83px; }
  .briefing { padding: 5px 15px; } h1 { font-size: 53px; margin: 5px 0; } .briefing p { margin: 7px 0 12px; } .primary { min-height: 35px; font-size: 19px; }
  .result { margin: 0 0 8px; } .result strong { font-size: 23px; } .legend { min-height: 43px; } .hint { display: none; }
  .touch-mode.in-battle, .touch-mode.in-battle body { overflow: hidden; overscroll-behavior: none; touch-action: none; }
