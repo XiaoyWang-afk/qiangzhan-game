@@ -25,50 +25,112 @@ test('weapon pickup unlocks a slot and reload consumes the correct reserve', () 
   const game = arena.create(960, 600);
   assert.equal(arena.switchGun(game, 1), false);
   assert.equal(game.notice, '未解锁 · 拾取霰弹枪');
-  advance(game, .53);
+  advance(game, arena.pacing.opening + .01);
   const pickup = game.drops.find(d => d.kind === 'gun');
   assert.equal(pickup.amount, 1);
   Object.assign(game.player, { x: pickup.x, y: pickup.y });
   advance(game, .01);
-  assert.equal(game.player.slot, 1);
+  assert.equal(game.player.slot, 0);
+  assert.equal(arena.switchGun(game, 1), true);
   advance(game, .13);
   advance(game, .01, { ...idle, fire: true });
-  assert.equal(game.arsenal[1].clip, 5);
+  assert.equal(game.arsenal[1].clip, 7);
   assert.equal(game.bullets.length, 7);
   assert.equal(arena.reload(game), true);
   advance(game, 1.15);
-  assert.equal(game.arsenal[1].clip, 6);
+  assert.equal(game.arsenal[1].clip, 8);
   assert.equal(game.arsenal[1].reserve, 17);
   assert.equal(arena.switchGun(game, 0), true);
 });
 
 test('switching weapons lets a pending reload finish in the background', () => {
   const game = arena.create(960, 600);
-  Object.assign(game.arsenal[1], { unlocked: true, clip: 5, reserve: 18 });
+  Object.assign(game.arsenal[1], { unlocked: true, clip: 7, reserve: 18 });
   assert.equal(arena.switchGun(game, 1), true);
   assert.equal(arena.reload(game), true);
   assert.equal(arena.switchGun(game, 0), true);
   advance(game, 1.15);
   assert.equal(arena.switchGun(game, 1), true);
-  assert.equal(game.arsenal[1].clip, 6);
+  assert.equal(game.arsenal[1].clip, 8);
   assert.equal(game.arsenal[1].reserve, 17);
   assert.equal(game.arsenal[1].reload, 0);
 });
 
-test('every fourth wave includes a boss, and ranged enemies fire', () => {
-  for (let i = 1; i <= 12; i++) {
+test('opening waves add threats gradually and bosses have only a small scout escort', () => {
+  assert.deepEqual(Array.from(arena.waveRoster(1)), ['scout', 'scout', 'scout', 'scout']);
+  assert.equal(arena.waveRoster(2).filter(kind => kind === 'gunner').length, 1);
+  assert.equal(arena.waveRoster(2).includes('dash'), false);
+  assert.equal(arena.waveRoster(3).filter(kind => kind === 'gunner').length, 1);
+  assert.equal(arena.waveRoster(3).filter(kind => kind === 'dash').length, 2);
+  for (let i = 4; i <= 12; i++) {
     const roster = arena.waveRoster(i);
     assert.equal(roster.includes('boss'), i % 4 === 0);
-    assert.ok(roster.includes('gunner'));
-    if (i > 1) assert.ok(roster.includes('dash'));
+    if (i % 4 === 0) {
+      assert.ok(roster.length <= 4);
+      assert.ok(roster.slice(1).every(kind => kind === 'scout'));
+    } else {
+      assert.ok(roster.includes('gunner') && roster.includes('dash'));
+    }
   }
+});
+
+test('a boss telegraphs and commits to its fan before firing', () => {
   const game = arena.create(960, 600);
   game.wave = 3;
-  advance(game, 1.26);
-  assert.equal(game.enemies[0].kind, 'boss');
-  game.enemies[0].fire = 0;
+  game.nextWave = .01;
+  advance(game, .8);
+  const boss = game.enemies[0];
+  assert.equal(boss.kind, 'boss');
+  boss.fire = arena.pacing.bossTell + .02;
+  advance(game, .03);
+  const angle = boss.volleyAngle;
+  assert.equal(typeof angle, 'number');
+  assert.equal(game.bullets.length, 0);
+  game.player.y += 100;
+  advance(game, arena.pacing.bossTell + .02);
+  const volley = game.bullets.filter(b => b.enemy);
+  assert.deepEqual(Array.from(volley, b => b.a), Array.from(arena.pacing.bossFan, offset => angle + offset));
+  assert.equal(boss.volleyAngle, null);
+});
+
+test('the opening waits before spawning and a cleared wave heals and clears incoming shots', () => {
+  const game = arena.create(960, 600);
+  advance(game, arena.pacing.opening - .02);
+  assert.equal(game.wave, 0);
+  assert.equal(game.enemies.length, 0);
+  advance(game, .04);
+  assert.equal(game.wave, 1);
+  assert.equal(game.nextWave, null);
+  game.pending = [];
+  game.player.hp = 70;
+  game.bullets.push({ enemy: true });
   advance(game, .01);
-  assert.equal(game.bullets.filter(b => b.enemy).length, 5);
+  assert.equal(game.player.hp, 86);
+  assert.equal(game.bullets.length, 0);
+  assert.ok(game.nextWave > 3.9);
+  advance(game, 2);
+  assert.equal(game.wave, 1);
+  assert.equal(game.player.hp, 86);
+  advance(game, 2.1);
+  assert.equal(game.wave, 2);
+});
+
+test('an idle-score wave sends a faster interceptor ahead of the player', () => {
+  const game = arena.create(1200, 600);
+  game.wave = 1;
+  game.nextWave = null;
+  game.elapsed = arena.pacing.pressureAfter - .02;
+  game.enemies.push({ x: 150, y: 300, kind: 'scout', r: 14, hp: 46, max: 46, warm: 0, fire: 0, phase: 0, hit: 0 });
+  advance(game, .03, { x: 1, y: 0 });
+  const threat = game.enemies.find(e => e.interceptor);
+  assert.equal(threat.kind, 'dash');
+  assert.ok(threat.x > game.player.x);
+  assert.equal(game.notice, '警报 · 敌机包抄');
+  advance(game, .59, { x: 1, y: 0 });
+  const x = threat.x;
+  const y = threat.y;
+  advance(game, .01, { x: 1, y: 0 });
+  assert.ok(Math.hypot(threat.x - x, threat.y - y) > 2.55);
 });
 
 test('successful hits score once, update the best run, and allow the next wave', () => {
@@ -113,12 +175,12 @@ test('coincident enemies spread apart and do not cover the player', () => {
 test('a point-blank shotgun blast hits an overlapping scout before the muzzle', () => {
   const game = arena.create(960, 600);
   game.player.x = 26;
-  Object.assign(game.arsenal[1], { unlocked: true, clip: 6, reserve: 18 });
+  Object.assign(game.arsenal[1], { unlocked: true, clip: 8, reserve: 18 });
   assert.equal(arena.switchGun(game, 1), true);
   advance(game, .14);
   game.enemies.push({ x: 25, y: game.player.y, kind: 'scout', r: 14, hp: 46, max: 46, warm: 0, fire: 0, phase: 0, hit: 0 });
   advance(game, .01, { ...idle, angle: Math.PI, fire: true });
-  assert.equal(game.arsenal[1].clip, 5);
+  assert.equal(game.arsenal[1].clip, 7);
   assert.equal(game.enemies.length, 0);
   assert.equal(game.score, 100);
 });

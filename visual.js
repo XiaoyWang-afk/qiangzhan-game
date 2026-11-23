@@ -1,7 +1,7 @@
 'use strict';
 
 const Visual = (() => {
-  const { TAU, guns, types } = Arena;
+  const { TAU, guns, types, pacing } = Arena;
   const cyan = '#68f7df';
   const violet = '#ad87ff';
 
@@ -200,6 +200,25 @@ const Visual = (() => {
     c.restore();
   }
 
+  function bossTell(c, e) {
+    if (e.volleyAngle == null) return;
+    const radius = 147 + 37 * (1 - e.fire / pacing.bossTell);
+    c.save();
+    c.translate(e.x, e.y);
+    c.rotate(e.volleyAngle);
+    c.strokeStyle = '#ffdfa1';
+    c.lineWidth = 1.5;
+    c.globalAlpha = .44 + .36 * (1 - e.fire / pacing.bossTell);
+    c.setLineDash([6, 5]);
+    for (const a of pacing.bossFan) {
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      path(c, [[dx * (e.r + 6), dy * (e.r + 6)], [dx * radius, dy * radius]], false);
+      c.stroke();
+    }
+    c.restore();
+  }
+
   function crosshair(c, x, y) {
     c.strokeStyle = cyan;
     c.lineWidth = 1.2;
@@ -287,6 +306,7 @@ const Visual = (() => {
         c.stroke();
       }
       c.globalAlpha = 1;
+      for (const e of s.enemies) bossTell(c, e);
       for (const d of s.drops) pickup(c, d, time);
       for (const e of s.enemies) drone(c, e, time);
       for (const b of s.bullets) {

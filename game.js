@@ -4,7 +4,7 @@
   const byId = id => document.getElementById(id);
   const ui = Object.fromEntries([
     'field', 'stage', 'life', 'life-label', 'hp', 'life-bar', 'gun', 'reload-status', 'ammo', 'wave', 'score', 'best', 'notice', 'overlay',
-    'eyebrow', 'heading', 'subtitle', 'result', 'final-score', 'final-best', 'action', 'hint',
+    'eyebrow', 'heading', 'subtitle', 'result', 'final-score', 'final-best', 'final-time', 'action', 'hint',
     'sound', 'pause', 'touch-actions', 'touch-gun', 'touch-reload', 'loadout',
   ].map(id => [id, byId(id)]));
   const arms = Array.from(ui.loadout.querySelectorAll('button'));
@@ -89,7 +89,9 @@
     const p = game.player;
     const ammo = game.arsenal[p.slot];
     const unlocked = game.arsenal.map(item => item.unlocked).join(',');
-    const notice = game.noticeTime > 0 ? game.notice : '';
+    const countdown = game.nextWave === null ? '' :
+      (game.wave ? '休整 · 下一波 ' : '战斗准备 · ') + Math.ceil(game.nextWave) + ' 秒';
+    const notice = game.noticeTime > 0 ? game.notice : countdown;
     const signature = [state, p.hp, p.slot, ammo.clip, ammo.reserve, !!ammo.reload, game.wave, game.score, game.best, unlocked, notice].join('|');
     if (signature === uiSnapshot) return;
     uiSnapshot = signature;
@@ -139,6 +141,7 @@
       ui.result.hidden = next !== 'over';
       ui['final-score'].textContent = Arena.readout(game.score);
       ui['final-best'].textContent = Arena.readout(game.best);
+      ui['final-time'].textContent = Arena.duration(game.elapsed);
       if (focus) ui.action.focus({ preventScroll: true });
     }
     updateHud();

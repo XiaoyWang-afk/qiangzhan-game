@@ -2,9 +2,20 @@
 
 const Arena = (() => {
   const TAU = Math.PI * 2;
+  const pacing = {
+    opening: 3.5, recovery: 4, recoveryHeal: 16,
+    earlyRosters: [
+      ['scout', 'scout', 'scout', 'scout'],
+      ['scout', 'scout', 'gunner', 'scout', 'scout', 'scout'],
+      ['scout', 'scout', 'dash', 'scout', 'gunner', 'scout', 'dash'],
+    ],
+    earlySpawnGap: .96, firstSpawnDelay: .2, lateSpawnGap: .68, minSpawnGap: .31,
+    bossEvery: 4, bossFirstVolley: 2.35, bossVolleyGap: 2.15, bossTell: .62, bossFan: [-.5, -.25, 0, .25, .5],
+    pressureAfter: 18, interceptorSpeed: 285, maxInterceptors: 2,
+  };
   const guns = [
     { name: '手枪', size: 12, reserve: Infinity, rate: .25, reload: .73, damage: 27, speed: 790, count: 1, spread: 0, life: 1.12, color: '#fff5c6' },
-    { name: '霰弹枪', size: 6, reserve: 18, rate: .57, reload: 1.13, damage: 17, speed: 720, count: 7, spread: .49, life: .36, color: '#ffb469' },
+    { name: '霰弹枪', size: 8, reserve: 18, rate: .57, reload: .88, damage: 17, speed: 720, count: 7, spread: .49, life: .36, color: '#ffb469' },
     { name: '冲锋枪', size: 28, reserve: 84, rate: .09, reload: .94, damage: 14, speed: 880, count: 1, spread: .14, life: .79, color: '#a4f4ff' },
   ];
   const types = {
@@ -19,10 +30,11 @@ const Arena = (() => {
   const angleTo = (a, b) => Math.atan2(b.y - a.y, b.x - a.x);
   const length = (x, y) => Math.hypot(x, y);
   const readout = (n, width = 5) => String(n).padStart(width, '0');
+  const duration = time => readout(Math.floor(time / 60), 2) + ':' + readout(Math.floor(time % 60), 2);
 
   function create(w, h, best = 0) {
     return {
-      w, h, best, newRecord: false, score: 0, elapsed: 0, wave: 0, spawnIn: 0, nextWave: .52,
+      w, h, best, newRecord: false, score: 0, elapsed: 0, lastProgress: 0, wave: 0, spawnIn: 0, nextWave: pacing.opening,
       player: { x: w / 2, y: h / 2, r: 15, hp: 100, angle: -Math.PI / 2, heat: 0, shield: 0, flash: 0, slot: 0 },
       arsenal: guns.map((gun, i) => ({ clip: i ? 0 : gun.size, reserve: i ? 0 : Infinity, unlocked: i === 0, reload: 0 })),
       pending: [], enemies: [], bullets: [], drops: [], sparks: [], rings: [], events: [],
@@ -85,10 +97,14 @@ const Arena = (() => {
   }
 
   function waveRoster(wave) {
+    const early = pacing.earlyRosters[wave - 1];
+    if (early) return [...early];
+    if (wave % pacing.bossEvery === 0) {
+      return wave === pacing.bossEvery ? ['boss', 'scout', 'scout'] : ['boss', 'scout', 'scout', 'scout'];
+    }
     const list = [];
-    if (wave % 4 === 0) list.push('boss');
     for (let i = 0; i < Math.min(4 + wave * 2, 26); i++) {
-      list.push(i % 4 === 2 ? 'gunner' : wave >= 2 && i % 3 === 1 ? 'dash' : 'scout');
+      list.push(i % 4 === 2 ? 'gunner' : i % 3 === 1 ? 'dash' : 'scout');
     }
     return list;
   }
@@ -99,15 +115,18 @@ const Arena = (() => {
 
   function startWave(s) {
     s.wave++;
+    s.nextWave = null;
+    s.lastProgress = s.elapsed;
     s.pending = waveRoster(s.wave);
-    s.spawnIn = .1;
-    notify(s, s.wave % 4 === 0 ? '警报 · 首领入侵' : '第 ' + readout(s.wave, 2) + ' 波 · 敌机来袭');
-    s.events.push(s.wave % 4 === 0 ? 'alarm' : 'wave');
+    s.spawnIn = pacing.firstSpawnDelay;
+    const bossWave = s.wave % pacing.bossEvery === 0;
+    notify(s, bossWave ? '警报 · 首领入侵' : '第 ' + readout(s.wave, 2) + ' 波 · 敌机来袭');
+    s.events.push(bossWave ? 'alarm' : 'wave');
     if (!s.arsenal[1].unlocked && !s.drops.some(d => d.kind === 'gun' && d.amount === 1)) drop(s, s.w * .67, s.h * .54, 'gun', 1);
     if (s.wave >= 2 && !s.arsenal[2].unlocked && !s.drops.some(d => d.kind === 'gun' && d.amount === 2)) drop(s, s.w * .32, s.h * .48, 'gun', 2);
   }
 
-  function spawn(s, kind) {
+  function spawn(s, kind, ahead = null) {
     const t = types[kind];
     const positions = [
       { x: s.w * .13, y: random(.15, .85) * s.h },
@@ -117,10 +136,46 @@ const Arena = (() => {
     ];
     const distant = positions.filter(pos => distance(pos, s.player) >= Math.min(s.w, s.h) * .32);
     const choices = distant.length ? distant : positions;
-    const pos = choices[Math.floor(Math.random() * choices.length)];
-    const max = Math.ceil(t.hp * (1 + (s.wave - (kind === 'boss' ? 4 : 1)) * .055));
-    s.enemies.push({ ...pos, kind, max, hp: max, r: t.r, angle: angleTo(pos, s.player), warm: .56, fire: random(.78, 1.65), phase: random(0, TAU), hit: 0 });
+    const pos = ahead === null ? choices[Math.floor(Math.random() * choices.length)] : choices.reduce((best, point) => {
+      const alignment = target => Math.cos(angleTo(s.player, target) - ahead);
+      return alignment(point) > alignment(best) ? point : best;
+    });
+    const boss = kind === 'boss';
+    const max = Math.ceil(t.hp * (1 + (s.wave - (boss ? pacing.bossEvery : 1)) * .055));
+    s.enemies.push({ ...pos, kind, max, hp: max, r: t.r, angle: angleTo(pos, s.player), warm: .56,
+      fire: boss ? pacing.bossFirstVolley : random(.78, 1.65), volleyAngle: null, interceptor: ahead !== null, phase: random(0, TAU), hit: 0 });
     ring(s, pos.x, pos.y, t.color, t.r * 2.6);
+  }
+
+  function updateWave(s, input, dt) {
+    if (s.pending.length) {
+      if ((s.spawnIn -= dt) <= 0) {
+        spawn(s, s.pending.shift());
+        s.spawnIn = s.wave <= pacing.earlyRosters.length ? pacing.earlySpawnGap : Math.max(pacing.minSpawnGap, pacing.lateSpawnGap - s.wave * .026);
+      }
+      return;
+    }
+    if (!s.enemies.length) {
+      if (s.nextWave === null) {
+        s.nextWave = pacing.recovery;
+        s.noticeTime = 0;
+        s.bullets = s.bullets.filter(b => !b.enemy);
+        if (s.player.hp < 100) {
+          s.player.hp = Math.min(100, s.player.hp + pacing.recoveryHeal);
+          ring(s, s.player.x, s.player.y, '#9cf389', 58);
+          s.events.push('pickup');
+        }
+      }
+      if ((s.nextWave -= dt) <= 0) startWave(s);
+      return;
+    }
+    if (s.wave && s.wave % pacing.bossEvery !== 0 && s.elapsed - s.lastProgress >= pacing.pressureAfter &&
+        s.enemies.filter(e => e.interceptor).length < pacing.maxInterceptors) {
+      const ahead = length(input.x, input.y) > .15 ? Math.atan2(input.y, input.x) : s.player.angle;
+      spawn(s, 'dash', ahead);
+      s.lastProgress = s.elapsed;
+      notify(s, '警报 · 敌机包抄');
+    }
   }
 
   function fire(s) {
@@ -166,6 +221,7 @@ const Arena = (() => {
     burst(s, b.x, b.y, t.color, 4);
     if (e.hp) return;
     s.score += t.score;
+    s.lastProgress = s.elapsed;
     if (s.score > s.best) {
       s.best = s.score;
       s.newRecord = true;
@@ -193,19 +249,23 @@ const Arena = (() => {
       const ranged = e.kind === 'gunner' || e.kind === 'boss';
       const spacing = Math.min(s.w, s.h) * (e.kind === 'boss' ? .36 : .39);
       const direction = ranged && dist < spacing ? (dist < spacing * .68 ? -.66 : 0) : 1;
-      const speed = t.speed * (1 + Math.min(.55, (s.wave - 1) * .038));
+      const speed = e.interceptor ? pacing.interceptorSpeed : t.speed * (1 + Math.min(.55, (s.wave - 1) * .038));
       const sidestep = ranged ? Math.sin(s.elapsed * 2.4 + e.phase) * .34 : 0;
       e.x += (Math.cos(e.angle) * direction - Math.sin(e.angle) * sidestep) * speed * dt;
       e.y += (Math.sin(e.angle) * direction + Math.cos(e.angle) * sidestep) * speed * dt;
       if (distance(p, e) < e.r + p.r) hurt(s, t.damage);
-      if (ranged && (e.fire -= dt) <= 0) {
-        const boss = e.kind === 'boss';
-        for (const offset of boss ? [-.5, -.25, 0, .25, .5] : [0]) {
-          const a = e.angle + offset;
+      const boss = e.kind === 'boss';
+      if (ranged) e.fire -= dt;
+      if (boss && e.volleyAngle == null && e.fire <= pacing.bossTell) e.volleyAngle = e.angle;
+      if (ranged && e.fire <= 0) {
+        const angle = boss ? e.volleyAngle : e.angle;
+        for (const offset of boss ? pacing.bossFan : [0]) {
+          const a = angle + offset;
           s.bullets.push({ x: e.x + Math.cos(a) * e.r, y: e.y + Math.sin(a) * e.r, a, speed: boss ? 252 : 278, life: 3.6, damage: boss ? 15 : t.damage, color: '#ffe66d', enemy: true, r: boss ? 5 : 4 });
         }
-        e.fire = boss ? 1.29 : 1.65;
-        burst(s, e.x + Math.cos(e.angle) * e.r, e.y + Math.sin(e.angle) * e.r, t.color, 5, 75);
+        e.fire = boss ? pacing.bossVolleyGap : 1.65;
+        e.volleyAngle = null;
+        burst(s, e.x + Math.cos(angle) * e.r, e.y + Math.sin(angle) * e.r, t.color, 5, 75);
       }
     }
     separateEnemies(s);
@@ -322,7 +382,6 @@ const Arena = (() => {
       } else {
         const gun = guns[d.amount];
         Object.assign(s.arsenal[d.amount], { unlocked: true, clip: gun.size, reserve: gun.reserve });
-        switchGun(s, d.amount);
         notify(s, '已解锁 · ' + gun.name);
       }
       s.events.push('pickup');
@@ -371,19 +430,11 @@ const Arena = (() => {
     else if (input.aim) p.angle = angleTo(p, input.aim);
     if (input.fire) fire(s);
 
-    if (s.pending.length) {
-      if ((s.spawnIn -= dt) <= 0) {
-        spawn(s, s.pending.shift());
-        s.spawnIn = Math.max(.31, .68 - s.wave * .026);
-      }
-    } else if (!s.enemies.length && (s.nextWave -= dt) <= 0) {
-      startWave(s);
-      s.nextWave = 1.7;
-    }
+    updateWave(s, input, dt);
     updateEnemies(s, dt);
     updateBullets(s, dt);
     if (p.hp) updateDrops(s, dt);
   }
 
-  return { create, resize, step, switchGun, reload, guns, types, waveRoster, readout, TAU };
+  return { create, resize, step, switchGun, reload, guns, types, pacing, waveRoster, readout, duration, TAU };
 })();
