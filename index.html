@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#faf7ed">
+  <title>枪战 · 纸上突围</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23faf7ed'/%3E%3Cpath d='M27 6 8 17 5 8 27 6 15 26 12 18Z' fill='%23d9e4e5' stroke='%23386789' stroke-width='1.5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="arena.js"></script>
+  <script defer src="visual.js"></script>
+  <script defer src="game.js"></script>
+</head>
+<body>
+  <main class="machine">
+    <header class="masthead">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true"><i></i></span>
+        <div><strong>枪战手记</strong><small>纸上突围 · 生存练习</small></div>
+      </div>
+      <div class="mast-actions">
+        <span class="online"><i></i> 今天也要守住！</span>
+        <button class="icon-button" id="sound" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z M16 9a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12"/></svg><span>音效开启</span>
+        </button>
+        <button class="icon-button" id="pause" type="button" disabled>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5v14m6-14v14"/></svg><span>暂停</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="cabinet" aria-label="纸上突围竞技场">
+      <div class="hud">
+        <div class="stat life" id="life"><span id="life-label">生命值</span><strong id="hp">100</strong><div class="life-track" aria-hidden="true"><i id="life-bar"></i></div></div>
+        <div class="stat ammo"><div class="weapon-meta"><span id="gun">手枪</span><span id="reload-status" hidden>换弹中</span></div><strong id="ammo">12<span> / ∞</span></strong></div>
+        <div class="stat"><span>波次</span><strong id="wave">01</strong></div>
+        <div class="stat"><span>得分</span><strong id="score">00000</strong></div>
+        <div class="stat record"><span>最高纪录</span><strong id="best">00000</strong></div>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="field" aria-label="俯视竞技场"></canvas>
+        <div class="arena-label" aria-hidden="true"><i></i> 作战草稿 <span>／</span> 第 01 页</div>
+        <div class="overlay" id="overlay">
+          <div class="briefing">
+            <div class="eyebrow" id="eyebrow"><i></i><span>生存模式 · 涂鸦作战</span><i></i></div>
+            <h1 id="heading">纸上<span>突围</span></h1>
+            <p id="subtitle">一张纸，一道防线。守住阵地，撑过下一波。</p>
+            <div id="result" class="result" hidden>
+              <div><span>本局得分</span><strong id="final-score"></strong></div>
+              <div><span>最高纪录</span><strong id="final-best"></strong></div>
+              <div><span>生存时间</span><strong id="final-time"></strong></div>
+            </div>
+            <button id="action" class="primary" type="button">开始战斗 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button>
+            <div id="hint" class="hint">按 <kbd>回车</kbd> 快速开始</div>
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="legend-info">
+          <div class="controls desktop-controls"><span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> 移动</span><span><kbd>鼠标</kbd> 瞄准／射击</span><span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 切换武器 · 拾取解锁</span><span><kbd>R</kbd> 换弹</span><span><kbd>P</kbd> / <kbd>Esc</kbd> 暂停</span></div>
+          <div class="controls mobile-controls"><span>左侧拖动 · 移动</span><span>右侧拖动 · 瞄准／射击</span><span>拾取解锁武器</span></div>
+          <div class="notice" id="notice" hidden></div>
+        </div>
+        <div class="touch-actions" id="touch-actions" hidden>
+          <button type="button" id="touch-gun">切换</button><button type="button" id="touch-reload">换弹</button>
+        </div>
+        <div id="loadout" class="loadout" aria-label="武器切换">
+          <button type="button" data-gun="0" title="手枪" aria-label="手枪">01</button>
+          <button type="button" data-gun="1" title="霰弹枪" aria-label="霰弹枪">02</button>
+          <button type="button" data-gun="2" title="冲锋枪" aria-label="冲锋枪">03</button>
+        </div>
+      </div>
+    </section>
+    <footer><span>铅笔起稿<span class="footer-divider"> / </span>勇气上色</span><span>存活越久，得分越高。</span></footer>
+  </main>
+</body>
+</html>
